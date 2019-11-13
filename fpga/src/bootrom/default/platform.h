@@ -1,0 +1,2 @@
+#define UART_FREQUENCY 50000000
+
