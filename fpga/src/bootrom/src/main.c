@@ -6,7 +6,7 @@
 
 int main()
 {
-    init_uart(UART_FREQUENCY, 115200);
+    init_uart(UART_FREQUENCY, UART_BAUD);
     print_uart("Hello World!\r\n");
 
     int res = gpt_find_boot_partition((uint8_t *)0x80000000UL, 2 * 16384);

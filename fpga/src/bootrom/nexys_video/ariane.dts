@@ -6,7 +6,7 @@
   compatible = "eth,ariane-bare-dev";
   model = "eth,ariane-bare";
   chosen {
-    stdout-path = "/soc/uart@10000000:115200";
+    stdout-path = "/soc/uart@10000000:57600";
   };
   cpus {
     #address-cells = <1>;
@@ -72,7 +72,7 @@
       compatible = "ns16750";
       reg = <0x0 0x10000000 0x0 0x1000>;
       clock-frequency = <40000000>;
-      current-speed = <115200>;
+      current-speed = <57600>;
       interrupt-parent = <&PLIC0>;
       interrupts = <1>;
       reg-shift = <2>; // regs are spaced on 32 bit boundary
