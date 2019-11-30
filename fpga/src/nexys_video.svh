@@ -26,3 +26,7 @@
 
 // avoid timing violations in FPU
 `define FPU_SLOWER
+
+// generate embedded rom
+`define EMBED_PAYLOAD_ROM
+

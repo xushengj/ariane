@@ -307,6 +307,9 @@ axi_node_wrap_with_slices #(
         ariane_soc::SPIBase,
         ariane_soc::EthernetBase,
         ariane_soc::GPIOBase,
+`ifdef EMBED_PAYLOAD_ROM
+        ariane_soc::EMROMBase,
+`endif
         ariane_soc::DRAMBase
     }),
     .end_addr_i   ({
@@ -318,6 +321,9 @@ axi_node_wrap_with_slices #(
         ariane_soc::SPIBase      + ariane_soc::SPILength - 1,
         ariane_soc::EthernetBase + ariane_soc::EthernetLength -1,
         ariane_soc::GPIOBase     + ariane_soc::GPIOLength - 1,
+`ifdef EMBED_PAYLOAD_ROM
+        ariane_soc::EMROMBase    + ariane_soc::EMROMLength -1,
+`endif
         ariane_soc::DRAMBase     + ariane_soc::DRAMLength - 1
     }),
     .valid_rule_i (ariane_soc::ValidRule)
@@ -530,6 +536,36 @@ bootrom i_bootrom (
     .addr_i  ( rom_addr  ),
     .rdata_o ( rom_rdata )
 );
+
+`ifdef EMBED_PAYLOAD_ROM
+// Embedded ROM
+logic                    emrom_req;
+logic [AxiAddrWidth-1:0] emrom_addr;
+logic [AxiDataWidth-1:0] emrom_rdata;
+axi2mem #(
+    .AXI_ID_WIDTH   ( AxiIdWidthSlaves ),
+    .AXI_ADDR_WIDTH ( AxiAddrWidth     ),
+    .AXI_DATA_WIDTH ( AxiDataWidth     ),
+    .AXI_USER_WIDTH ( AxiUserWidth     )
+) i_axi2emrom (
+    .clk_i  ( clk                       ),
+    .rst_ni ( ndmreset_n                ),
+    .slave  ( master[ariane_soc::EMROM] ),
+    .req_o  ( emrom_req                 ),
+    .we_o   (                           ),
+    .addr_o ( emrom_addr                ),
+    .be_o   (                           ),
+    .data_o (                           ),
+    .data_i ( emrom_rdata               )
+);
+
+payload i_emrom (
+    .clk_i   ( clk         ),
+    .req_i   ( emrom_req   ),
+    .addr_i  ( emrom_addr  ),
+    .rdata_o ( emrom_rdata )
+);
+`endif
 
 // ---------------
 // Peripherals
