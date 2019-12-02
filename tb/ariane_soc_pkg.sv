@@ -27,15 +27,14 @@ package ariane_soc;
     DRAM     = 0,
 `ifdef ADD_FLASH_PERIPHERAL
     Flash    = 1,
-    FlashCTL = 2,
-    GPIO     = 3,
-    Ethernet = 4,
-    SPI      = 5,
-    UART     = 6,
-    PLIC     = 7,
-    CLINT    = 8,
-    ROM      = 9,
-    Debug    = 10
+    GPIO     = 2,
+    Ethernet = 3,
+    SPI      = 4,
+    UART     = 5,
+    PLIC     = 6,
+    CLINT    = 7,
+    ROM      = 8,
+    Debug    = 9
 `else
     GPIO     = 1,
     Ethernet = 2,
@@ -60,7 +59,6 @@ package ariane_soc;
   localparam logic[63:0] EthernetLength = 64'h10000;
   localparam logic[63:0] GPIOLength     = 64'h1000;
 `ifdef ADD_FLASH_PERIPHERAL
-  localparam logic[63:0] FlashCTLLength = 64'h100;
   localparam logic[63:0] FlashLength    = 64'h2000000; // 32MB of flash
 `endif
 `ifdef NEXYS_VIDEO
@@ -82,7 +80,6 @@ package ariane_soc;
     EthernetBase = 64'h3000_0000,
     GPIOBase     = 64'h4000_0000,
 `ifdef ADD_FLASH_PERIPHERAL
-    FlashCTLBase = 64'h5FFF_0000,
     FlashBase    = 64'h6000_0000,
 `endif
     DRAMBase     = 64'h8000_0000

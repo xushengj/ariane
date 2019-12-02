@@ -312,7 +312,6 @@ axi_node_wrap_with_slices #(
         ariane_soc::EthernetBase,
         ariane_soc::GPIOBase,
 `ifdef ADD_FLASH_PERIPHERAL
-        ariane_soc::FlashCTLBase,
         ariane_soc::FlashBase,
 `endif
         ariane_soc::DRAMBase
@@ -327,7 +326,6 @@ axi_node_wrap_with_slices #(
         ariane_soc::EthernetBase + ariane_soc::EthernetLength -1,
         ariane_soc::GPIOBase     + ariane_soc::GPIOLength - 1,
 `ifdef ADD_FLASH_PERIPHERAL
-        ariane_soc::FlashCTLBase + ariane_soc::FlashCTLLength -1,
         ariane_soc::FlashBase    + ariane_soc::FlashLength -1,
 `endif
         ariane_soc::DRAMBase     + ariane_soc::DRAMLength - 1
@@ -1721,145 +1719,6 @@ xlnx_axi_dwidth_converter i_xlnx_axi_dwidth_converter_flash (
     .m_axi_rready   ( flash_s_axi_spi_rready   )
 );
 
-logic [31:0] flash_ctrl_s_axi_spi_awaddr;
-logic [7:0]  flash_ctrl_s_axi_spi_awlen;
-logic [2:0]  flash_ctrl_s_axi_spi_awsize;
-logic [1:0]  flash_ctrl_s_axi_spi_awburst;
-logic [0:0]  flash_ctrl_s_axi_spi_awlock;
-logic [3:0]  flash_ctrl_s_axi_spi_awcache;
-logic [2:0]  flash_ctrl_s_axi_spi_awprot;
-logic [3:0]  flash_ctrl_s_axi_spi_awregion;
-logic [3:0]  flash_ctrl_s_axi_spi_awqos;
-logic        flash_ctrl_s_axi_spi_awvalid;
-logic        flash_ctrl_s_axi_spi_awready;
-logic [31:0] flash_ctrl_s_axi_spi_wdata;
-logic [3:0]  flash_ctrl_s_axi_spi_wstrb;
-logic        flash_ctrl_s_axi_spi_wlast;
-logic        flash_ctrl_s_axi_spi_wvalid;
-logic        flash_ctrl_s_axi_spi_wready;
-logic [1:0]  flash_ctrl_s_axi_spi_bresp;
-logic        flash_ctrl_s_axi_spi_bvalid;
-logic        flash_ctrl_s_axi_spi_bready;
-logic [31:0] flash_ctrl_s_axi_spi_araddr;
-logic [7:0]  flash_ctrl_s_axi_spi_arlen;
-logic [2:0]  flash_ctrl_s_axi_spi_arsize;
-logic [1:0]  flash_ctrl_s_axi_spi_arburst;
-logic [0:0]  flash_ctrl_s_axi_spi_arlock;
-logic [3:0]  flash_ctrl_s_axi_spi_arcache;
-logic [2:0]  flash_ctrl_s_axi_spi_arprot;
-logic [3:0]  flash_ctrl_s_axi_spi_arregion;
-logic [3:0]  flash_ctrl_s_axi_spi_arqos;
-logic        flash_ctrl_s_axi_spi_arvalid;
-logic        flash_ctrl_s_axi_spi_arready;
-logic [31:0] flash_ctrl_s_axi_spi_rdata;
-logic [1:0]  flash_ctrl_s_axi_spi_rresp;
-logic        flash_ctrl_s_axi_spi_rlast;
-logic        flash_ctrl_s_axi_spi_rvalid;
-logic        flash_ctrl_s_axi_spi_rready;
-
-xlnx_axi_dwidth_converter i_xlnx_axi_dwidth_converter_flash_ctrl (
-    .s_axi_aclk     ( clk                ),
-    .s_axi_aresetn  ( ndmreset_n         ),
-
-    .s_axi_awid     ( master[ariane_soc::FlashCTL].aw_id          ),
-    .s_axi_awaddr   ( master[ariane_soc::FlashCTL].aw_addr[31:0]  ),
-    .s_axi_awlen    ( master[ariane_soc::FlashCTL].aw_len         ),
-    .s_axi_awsize   ( master[ariane_soc::FlashCTL].aw_size        ),
-    .s_axi_awburst  ( master[ariane_soc::FlashCTL].aw_burst       ),
-    .s_axi_awlock   ( master[ariane_soc::FlashCTL].aw_lock        ),
-    .s_axi_awcache  ( master[ariane_soc::FlashCTL].aw_cache       ),
-    .s_axi_awprot   ( master[ariane_soc::FlashCTL].aw_prot        ),
-    .s_axi_awregion ( master[ariane_soc::FlashCTL].aw_region      ),
-    .s_axi_awqos    ( master[ariane_soc::FlashCTL].aw_qos         ),
-    .s_axi_awvalid  ( master[ariane_soc::FlashCTL].aw_valid       ),
-    .s_axi_awready  ( master[ariane_soc::FlashCTL].aw_ready       ),
-    .s_axi_wdata    ( master[ariane_soc::FlashCTL].w_data         ),
-    .s_axi_wstrb    ( master[ariane_soc::FlashCTL].w_strb         ),
-    .s_axi_wlast    ( master[ariane_soc::FlashCTL].w_last         ),
-    .s_axi_wvalid   ( master[ariane_soc::FlashCTL].w_valid        ),
-    .s_axi_wready   ( master[ariane_soc::FlashCTL].w_ready        ),
-    .s_axi_bid      ( master[ariane_soc::FlashCTL].b_id           ),
-    .s_axi_bresp    ( master[ariane_soc::FlashCTL].b_resp         ),
-    .s_axi_bvalid   ( master[ariane_soc::FlashCTL].b_valid        ),
-    .s_axi_bready   ( master[ariane_soc::FlashCTL].b_ready        ),
-    .s_axi_arid     ( master[ariane_soc::FlashCTL].ar_id          ),
-    .s_axi_araddr   ( master[ariane_soc::FlashCTL].ar_addr[31:0]  ),
-    .s_axi_arlen    ( master[ariane_soc::FlashCTL].ar_len         ),
-    .s_axi_arsize   ( master[ariane_soc::FlashCTL].ar_size        ),
-    .s_axi_arburst  ( master[ariane_soc::FlashCTL].ar_burst       ),
-    .s_axi_arlock   ( master[ariane_soc::FlashCTL].ar_lock        ),
-    .s_axi_arcache  ( master[ariane_soc::FlashCTL].ar_cache       ),
-    .s_axi_arprot   ( master[ariane_soc::FlashCTL].ar_prot        ),
-    .s_axi_arregion ( master[ariane_soc::FlashCTL].ar_region      ),
-    .s_axi_arqos    ( master[ariane_soc::FlashCTL].ar_qos         ),
-    .s_axi_arvalid  ( master[ariane_soc::FlashCTL].ar_valid       ),
-    .s_axi_arready  ( master[ariane_soc::FlashCTL].ar_ready       ),
-    .s_axi_rid      ( master[ariane_soc::FlashCTL].r_id           ),
-    .s_axi_rdata    ( master[ariane_soc::FlashCTL].r_data         ),
-    .s_axi_rresp    ( master[ariane_soc::FlashCTL].r_resp         ),
-    .s_axi_rlast    ( master[ariane_soc::FlashCTL].r_last         ),
-    .s_axi_rvalid   ( master[ariane_soc::FlashCTL].r_valid        ),
-    .s_axi_rready   ( master[ariane_soc::FlashCTL].r_ready        ),
-
-    .m_axi_awaddr   ( flash_ctrl_s_axi_spi_awaddr   ),
-    .m_axi_awlen    ( flash_ctrl_s_axi_spi_awlen    ),
-    .m_axi_awsize   ( flash_ctrl_s_axi_spi_awsize   ),
-    .m_axi_awburst  ( flash_ctrl_s_axi_spi_awburst  ),
-    .m_axi_awlock   ( flash_ctrl_s_axi_spi_awlock   ),
-    .m_axi_awcache  ( flash_ctrl_s_axi_spi_awcache  ),
-    .m_axi_awprot   ( flash_ctrl_s_axi_spi_awprot   ),
-    .m_axi_awregion ( flash_ctrl_s_axi_spi_awregion ),
-    .m_axi_awqos    ( flash_ctrl_s_axi_spi_awqos    ),
-    .m_axi_awvalid  ( flash_ctrl_s_axi_spi_awvalid  ),
-    .m_axi_awready  ( flash_ctrl_s_axi_spi_awready  ),
-    .m_axi_wdata    ( flash_ctrl_s_axi_spi_wdata    ),
-    .m_axi_wstrb    ( flash_ctrl_s_axi_spi_wstrb    ),
-    .m_axi_wlast    ( flash_ctrl_s_axi_spi_wlast    ),
-    .m_axi_wvalid   ( flash_ctrl_s_axi_spi_wvalid   ),
-    .m_axi_wready   ( flash_ctrl_s_axi_spi_wready   ),
-    .m_axi_bresp    ( flash_ctrl_s_axi_spi_bresp    ),
-    .m_axi_bvalid   ( flash_ctrl_s_axi_spi_bvalid   ),
-    .m_axi_bready   ( flash_ctrl_s_axi_spi_bready   ),
-    .m_axi_araddr   ( flash_ctrl_s_axi_spi_araddr   ),
-    .m_axi_arlen    ( flash_ctrl_s_axi_spi_arlen    ),
-    .m_axi_arsize   ( flash_ctrl_s_axi_spi_arsize   ),
-    .m_axi_arburst  ( flash_ctrl_s_axi_spi_arburst  ),
-    .m_axi_arlock   ( flash_ctrl_s_axi_spi_arlock   ),
-    .m_axi_arcache  ( flash_ctrl_s_axi_spi_arcache  ),
-    .m_axi_arprot   ( flash_ctrl_s_axi_spi_arprot   ),
-    .m_axi_arregion ( flash_ctrl_s_axi_spi_arregion ),
-    .m_axi_arqos    ( flash_ctrl_s_axi_spi_arqos    ),
-    .m_axi_arvalid  ( flash_ctrl_s_axi_spi_arvalid  ),
-    .m_axi_arready  ( flash_ctrl_s_axi_spi_arready  ),
-    .m_axi_rdata    ( flash_ctrl_s_axi_spi_rdata    ),
-    .m_axi_rresp    ( flash_ctrl_s_axi_spi_rresp    ),
-    .m_axi_rlast    ( flash_ctrl_s_axi_spi_rlast    ),
-    .m_axi_rvalid   ( flash_ctrl_s_axi_spi_rvalid   ),
-    .m_axi_rready   ( flash_ctrl_s_axi_spi_rready   )
-);
-
-// unused output port (AXI4 -> AXI4Lite)
-/*
-logic [7:0]  flash_ctrl_s_axi_spi_awlen;
-logic [2:0]  flash_ctrl_s_axi_spi_awsize;
-logic [1:0]  flash_ctrl_s_axi_spi_awburst;
-logic [0:0]  flash_ctrl_s_axi_spi_awlock;
-logic [3:0]  flash_ctrl_s_axi_spi_awcache;
-logic [2:0]  flash_ctrl_s_axi_spi_awprot;
-logic [3:0]  flash_ctrl_s_axi_spi_awregion;
-logic [3:0]  flash_ctrl_s_axi_spi_awqos;
-logic        flash_ctrl_s_axi_spi_wlast;
-logic [7:0]  flash_ctrl_s_axi_spi_arlen;
-logic [2:0]  flash_ctrl_s_axi_spi_arsize;
-logic [1:0]  flash_ctrl_s_axi_spi_arburst;
-logic [0:0]  flash_ctrl_s_axi_spi_arlock;
-logic [3:0]  flash_ctrl_s_axi_spi_arcache;
-logic [2:0]  flash_ctrl_s_axi_spi_arprot;
-logic [3:0]  flash_ctrl_s_axi_spi_arregion;
-logic [3:0]  flash_ctrl_s_axi_spi_arqos;
-*/
-assign flash_ctrl_s_axi_spi_rlast = 1'b1;
-
 logic flash_io0_i;
 logic flash_io0_o;
 logic flash_io0_t;
@@ -1879,6 +1738,7 @@ logic flash_ss_t;
 nexys_video_axi_quad_spi_flash i_nexys_video_qspi_flash (
     .ext_spi_clk    ( clk),
     // AXI4Lite port for configuration register access
+/*
     .s_axi_aclk     ( clk                    ),
     .s_axi_aresetn  ( ndmreset_n             ),
     .s_axi_awaddr   ( flash_ctrl_s_axi_spi_awaddr  ),
@@ -1898,7 +1758,8 @@ nexys_video_axi_quad_spi_flash i_nexys_video_qspi_flash (
     .s_axi_rresp    ( flash_ctrl_s_axi_spi_rresp   ),
     .s_axi_rvalid   ( flash_ctrl_s_axi_spi_rvalid  ),
     .s_axi_rready   ( flash_ctrl_s_axi_spi_rready  ),
-    // AXI4 port for data access (XIP)
+*/
+    // AXI4 port for data access
     .s_axi4_aclk    ( clk                    ),
     .s_axi4_aresetn ( ndmreset_n             ),
     .s_axi4_awaddr  ( flash_s_axi_spi_awaddr[24:0] ),
