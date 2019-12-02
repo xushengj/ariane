@@ -12,6 +12,11 @@ ips := xlnx_axi_clock_converter.xci  \
        xlnx_clk_gen.xci              \
        xlnx_mig_7_ddr3.xci
 
+# board dependent IPs
+ifeq ($(BOARD), nexys_video)
+ips += nexys_video_axi_quad_spi_flash.xci
+endif
+
 ips := $(addprefix $(work-dir)/, $(ips))
 ips-target := $(join $(addsuffix /ip/, $(addprefix $(ip-dir)/, $(basename $(ips)))), $(ips))
 

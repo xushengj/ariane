@@ -169,6 +169,10 @@ module ariane_xilinx (
   input  logic [ 7:0]  sw          ,
   output logic         fan_pwm     ,
   input  logic         trst_n      ,
+`ifdef ADD_FLASH_PERIPHERAL
+  inout  wire          flash_ss    ,
+  inout  wire [3:0]    flash_dq    ,
+`endif // ADD_FLASH_PERIPHERAL
 `endif
   // SPI
   output logic        spi_mosi    ,
@@ -307,8 +311,9 @@ axi_node_wrap_with_slices #(
         ariane_soc::SPIBase,
         ariane_soc::EthernetBase,
         ariane_soc::GPIOBase,
-`ifdef EMBED_PAYLOAD_ROM
-        ariane_soc::EMROMBase,
+`ifdef ADD_FLASH_PERIPHERAL
+        ariane_soc::FlashCTLBase,
+        ariane_soc::FlashBase,
 `endif
         ariane_soc::DRAMBase
     }),
@@ -321,8 +326,9 @@ axi_node_wrap_with_slices #(
         ariane_soc::SPIBase      + ariane_soc::SPILength - 1,
         ariane_soc::EthernetBase + ariane_soc::EthernetLength -1,
         ariane_soc::GPIOBase     + ariane_soc::GPIOLength - 1,
-`ifdef EMBED_PAYLOAD_ROM
-        ariane_soc::EMROMBase    + ariane_soc::EMROMLength -1,
+`ifdef ADD_FLASH_PERIPHERAL
+        ariane_soc::FlashCTLBase + ariane_soc::FlashCTLLength -1,
+        ariane_soc::FlashBase    + ariane_soc::FlashLength -1,
 `endif
         ariane_soc::DRAMBase     + ariane_soc::DRAMLength - 1
     }),
@@ -536,36 +542,6 @@ bootrom i_bootrom (
     .addr_i  ( rom_addr  ),
     .rdata_o ( rom_rdata )
 );
-
-`ifdef EMBED_PAYLOAD_ROM
-// Embedded ROM
-logic                    emrom_req;
-logic [AxiAddrWidth-1:0] emrom_addr;
-logic [AxiDataWidth-1:0] emrom_rdata;
-axi2mem #(
-    .AXI_ID_WIDTH   ( AxiIdWidthSlaves ),
-    .AXI_ADDR_WIDTH ( AxiAddrWidth     ),
-    .AXI_DATA_WIDTH ( AxiDataWidth     ),
-    .AXI_USER_WIDTH ( AxiUserWidth     )
-) i_axi2emrom (
-    .clk_i  ( clk                       ),
-    .rst_ni ( ndmreset_n                ),
-    .slave  ( master[ariane_soc::EMROM] ),
-    .req_o  ( emrom_req                 ),
-    .we_o   (                           ),
-    .addr_o ( emrom_addr                ),
-    .be_o   (                           ),
-    .data_o (                           ),
-    .data_i ( emrom_rdata               )
-);
-
-payload i_emrom (
-    .clk_i   ( clk         ),
-    .req_i   ( emrom_req   ),
-    .addr_i  ( emrom_addr  ),
-    .rdata_o ( emrom_rdata )
-);
-`endif
 
 // ---------------
 // Peripherals
@@ -1626,6 +1602,417 @@ xlnx_mig_7_ddr3 i_ddr (
     .device_temp         (            ), // keep open
     .sys_rst             ( cpu_resetn )
 );
+
+`ifdef ADD_FLASH_PERIPHERAL
+logic [31:0] flash_s_axi_spi_awaddr;
+logic [7:0]  flash_s_axi_spi_awlen;
+logic [2:0]  flash_s_axi_spi_awsize;
+logic [1:0]  flash_s_axi_spi_awburst;
+logic [0:0]  flash_s_axi_spi_awlock;
+logic [3:0]  flash_s_axi_spi_awcache;
+logic [2:0]  flash_s_axi_spi_awprot;
+logic [3:0]  flash_s_axi_spi_awregion;
+logic [3:0]  flash_s_axi_spi_awqos;
+logic        flash_s_axi_spi_awvalid;
+logic        flash_s_axi_spi_awready;
+logic [31:0] flash_s_axi_spi_wdata;
+logic [3:0]  flash_s_axi_spi_wstrb;
+logic        flash_s_axi_spi_wlast;
+logic        flash_s_axi_spi_wvalid;
+logic        flash_s_axi_spi_wready;
+logic [1:0]  flash_s_axi_spi_bresp;
+logic        flash_s_axi_spi_bvalid;
+logic        flash_s_axi_spi_bready;
+logic [31:0] flash_s_axi_spi_araddr;
+logic [7:0]  flash_s_axi_spi_arlen;
+logic [2:0]  flash_s_axi_spi_arsize;
+logic [1:0]  flash_s_axi_spi_arburst;
+logic [0:0]  flash_s_axi_spi_arlock;
+logic [3:0]  flash_s_axi_spi_arcache;
+logic [2:0]  flash_s_axi_spi_arprot;
+logic [3:0]  flash_s_axi_spi_arregion;
+logic [3:0]  flash_s_axi_spi_arqos;
+logic        flash_s_axi_spi_arvalid;
+logic        flash_s_axi_spi_arready;
+logic [31:0] flash_s_axi_spi_rdata;
+logic [1:0]  flash_s_axi_spi_rresp;
+logic        flash_s_axi_spi_rlast;
+logic        flash_s_axi_spi_rvalid;
+logic        flash_s_axi_spi_rready;
+
+xlnx_axi_dwidth_converter i_xlnx_axi_dwidth_converter_flash (
+    .s_axi_aclk     ( clk                ),
+    .s_axi_aresetn  ( ndmreset_n         ),
+
+    .s_axi_awid     ( master[ariane_soc::Flash].aw_id          ),
+    .s_axi_awaddr   ( master[ariane_soc::Flash].aw_addr[31:0]  ),
+    .s_axi_awlen    ( master[ariane_soc::Flash].aw_len         ),
+    .s_axi_awsize   ( master[ariane_soc::Flash].aw_size        ),
+    .s_axi_awburst  ( master[ariane_soc::Flash].aw_burst       ),
+    .s_axi_awlock   ( master[ariane_soc::Flash].aw_lock        ),
+    .s_axi_awcache  ( master[ariane_soc::Flash].aw_cache       ),
+    .s_axi_awprot   ( master[ariane_soc::Flash].aw_prot        ),
+    .s_axi_awregion ( master[ariane_soc::Flash].aw_region      ),
+    .s_axi_awqos    ( master[ariane_soc::Flash].aw_qos         ),
+    .s_axi_awvalid  ( master[ariane_soc::Flash].aw_valid       ),
+    .s_axi_awready  ( master[ariane_soc::Flash].aw_ready       ),
+    .s_axi_wdata    ( master[ariane_soc::Flash].w_data         ),
+    .s_axi_wstrb    ( master[ariane_soc::Flash].w_strb         ),
+    .s_axi_wlast    ( master[ariane_soc::Flash].w_last         ),
+    .s_axi_wvalid   ( master[ariane_soc::Flash].w_valid        ),
+    .s_axi_wready   ( master[ariane_soc::Flash].w_ready        ),
+    .s_axi_bid      ( master[ariane_soc::Flash].b_id           ),
+    .s_axi_bresp    ( master[ariane_soc::Flash].b_resp         ),
+    .s_axi_bvalid   ( master[ariane_soc::Flash].b_valid        ),
+    .s_axi_bready   ( master[ariane_soc::Flash].b_ready        ),
+    .s_axi_arid     ( master[ariane_soc::Flash].ar_id          ),
+    .s_axi_araddr   ( master[ariane_soc::Flash].ar_addr[31:0]  ),
+    .s_axi_arlen    ( master[ariane_soc::Flash].ar_len         ),
+    .s_axi_arsize   ( master[ariane_soc::Flash].ar_size        ),
+    .s_axi_arburst  ( master[ariane_soc::Flash].ar_burst       ),
+    .s_axi_arlock   ( master[ariane_soc::Flash].ar_lock        ),
+    .s_axi_arcache  ( master[ariane_soc::Flash].ar_cache       ),
+    .s_axi_arprot   ( master[ariane_soc::Flash].ar_prot        ),
+    .s_axi_arregion ( master[ariane_soc::Flash].ar_region      ),
+    .s_axi_arqos    ( master[ariane_soc::Flash].ar_qos         ),
+    .s_axi_arvalid  ( master[ariane_soc::Flash].ar_valid       ),
+    .s_axi_arready  ( master[ariane_soc::Flash].ar_ready       ),
+    .s_axi_rid      ( master[ariane_soc::Flash].r_id           ),
+    .s_axi_rdata    ( master[ariane_soc::Flash].r_data         ),
+    .s_axi_rresp    ( master[ariane_soc::Flash].r_resp         ),
+    .s_axi_rlast    ( master[ariane_soc::Flash].r_last         ),
+    .s_axi_rvalid   ( master[ariane_soc::Flash].r_valid        ),
+    .s_axi_rready   ( master[ariane_soc::Flash].r_ready        ),
+
+    .m_axi_awaddr   ( flash_s_axi_spi_awaddr   ),
+    .m_axi_awlen    ( flash_s_axi_spi_awlen    ),
+    .m_axi_awsize   ( flash_s_axi_spi_awsize   ),
+    .m_axi_awburst  ( flash_s_axi_spi_awburst  ),
+    .m_axi_awlock   ( flash_s_axi_spi_awlock   ),
+    .m_axi_awcache  ( flash_s_axi_spi_awcache  ),
+    .m_axi_awprot   ( flash_s_axi_spi_awprot   ),
+    .m_axi_awregion ( flash_s_axi_spi_awregion ),
+    .m_axi_awqos    ( flash_s_axi_spi_awqos    ),
+    .m_axi_awvalid  ( flash_s_axi_spi_awvalid  ),
+    .m_axi_awready  ( flash_s_axi_spi_awready  ),
+    .m_axi_wdata    ( flash_s_axi_spi_wdata    ),
+    .m_axi_wstrb    ( flash_s_axi_spi_wstrb    ),
+    .m_axi_wlast    ( flash_s_axi_spi_wlast    ),
+    .m_axi_wvalid   ( flash_s_axi_spi_wvalid   ),
+    .m_axi_wready   ( flash_s_axi_spi_wready   ),
+    .m_axi_bresp    ( flash_s_axi_spi_bresp    ),
+    .m_axi_bvalid   ( flash_s_axi_spi_bvalid   ),
+    .m_axi_bready   ( flash_s_axi_spi_bready   ),
+    .m_axi_araddr   ( flash_s_axi_spi_araddr   ),
+    .m_axi_arlen    ( flash_s_axi_spi_arlen    ),
+    .m_axi_arsize   ( flash_s_axi_spi_arsize   ),
+    .m_axi_arburst  ( flash_s_axi_spi_arburst  ),
+    .m_axi_arlock   ( flash_s_axi_spi_arlock   ),
+    .m_axi_arcache  ( flash_s_axi_spi_arcache  ),
+    .m_axi_arprot   ( flash_s_axi_spi_arprot   ),
+    .m_axi_arregion ( flash_s_axi_spi_arregion ),
+    .m_axi_arqos    ( flash_s_axi_spi_arqos    ),
+    .m_axi_arvalid  ( flash_s_axi_spi_arvalid  ),
+    .m_axi_arready  ( flash_s_axi_spi_arready  ),
+    .m_axi_rdata    ( flash_s_axi_spi_rdata    ),
+    .m_axi_rresp    ( flash_s_axi_spi_rresp    ),
+    .m_axi_rlast    ( flash_s_axi_spi_rlast    ),
+    .m_axi_rvalid   ( flash_s_axi_spi_rvalid   ),
+    .m_axi_rready   ( flash_s_axi_spi_rready   )
+);
+
+logic [31:0] flash_ctrl_s_axi_spi_awaddr;
+logic [7:0]  flash_ctrl_s_axi_spi_awlen;
+logic [2:0]  flash_ctrl_s_axi_spi_awsize;
+logic [1:0]  flash_ctrl_s_axi_spi_awburst;
+logic [0:0]  flash_ctrl_s_axi_spi_awlock;
+logic [3:0]  flash_ctrl_s_axi_spi_awcache;
+logic [2:0]  flash_ctrl_s_axi_spi_awprot;
+logic [3:0]  flash_ctrl_s_axi_spi_awregion;
+logic [3:0]  flash_ctrl_s_axi_spi_awqos;
+logic        flash_ctrl_s_axi_spi_awvalid;
+logic        flash_ctrl_s_axi_spi_awready;
+logic [31:0] flash_ctrl_s_axi_spi_wdata;
+logic [3:0]  flash_ctrl_s_axi_spi_wstrb;
+logic        flash_ctrl_s_axi_spi_wlast;
+logic        flash_ctrl_s_axi_spi_wvalid;
+logic        flash_ctrl_s_axi_spi_wready;
+logic [1:0]  flash_ctrl_s_axi_spi_bresp;
+logic        flash_ctrl_s_axi_spi_bvalid;
+logic        flash_ctrl_s_axi_spi_bready;
+logic [31:0] flash_ctrl_s_axi_spi_araddr;
+logic [7:0]  flash_ctrl_s_axi_spi_arlen;
+logic [2:0]  flash_ctrl_s_axi_spi_arsize;
+logic [1:0]  flash_ctrl_s_axi_spi_arburst;
+logic [0:0]  flash_ctrl_s_axi_spi_arlock;
+logic [3:0]  flash_ctrl_s_axi_spi_arcache;
+logic [2:0]  flash_ctrl_s_axi_spi_arprot;
+logic [3:0]  flash_ctrl_s_axi_spi_arregion;
+logic [3:0]  flash_ctrl_s_axi_spi_arqos;
+logic        flash_ctrl_s_axi_spi_arvalid;
+logic        flash_ctrl_s_axi_spi_arready;
+logic [31:0] flash_ctrl_s_axi_spi_rdata;
+logic [1:0]  flash_ctrl_s_axi_spi_rresp;
+logic        flash_ctrl_s_axi_spi_rlast;
+logic        flash_ctrl_s_axi_spi_rvalid;
+logic        flash_ctrl_s_axi_spi_rready;
+
+xlnx_axi_dwidth_converter i_xlnx_axi_dwidth_converter_flash_ctrl (
+    .s_axi_aclk     ( clk                ),
+    .s_axi_aresetn  ( ndmreset_n         ),
+
+    .s_axi_awid     ( master[ariane_soc::FlashCTL].aw_id          ),
+    .s_axi_awaddr   ( master[ariane_soc::FlashCTL].aw_addr[31:0]  ),
+    .s_axi_awlen    ( master[ariane_soc::FlashCTL].aw_len         ),
+    .s_axi_awsize   ( master[ariane_soc::FlashCTL].aw_size        ),
+    .s_axi_awburst  ( master[ariane_soc::FlashCTL].aw_burst       ),
+    .s_axi_awlock   ( master[ariane_soc::FlashCTL].aw_lock        ),
+    .s_axi_awcache  ( master[ariane_soc::FlashCTL].aw_cache       ),
+    .s_axi_awprot   ( master[ariane_soc::FlashCTL].aw_prot        ),
+    .s_axi_awregion ( master[ariane_soc::FlashCTL].aw_region      ),
+    .s_axi_awqos    ( master[ariane_soc::FlashCTL].aw_qos         ),
+    .s_axi_awvalid  ( master[ariane_soc::FlashCTL].aw_valid       ),
+    .s_axi_awready  ( master[ariane_soc::FlashCTL].aw_ready       ),
+    .s_axi_wdata    ( master[ariane_soc::FlashCTL].w_data         ),
+    .s_axi_wstrb    ( master[ariane_soc::FlashCTL].w_strb         ),
+    .s_axi_wlast    ( master[ariane_soc::FlashCTL].w_last         ),
+    .s_axi_wvalid   ( master[ariane_soc::FlashCTL].w_valid        ),
+    .s_axi_wready   ( master[ariane_soc::FlashCTL].w_ready        ),
+    .s_axi_bid      ( master[ariane_soc::FlashCTL].b_id           ),
+    .s_axi_bresp    ( master[ariane_soc::FlashCTL].b_resp         ),
+    .s_axi_bvalid   ( master[ariane_soc::FlashCTL].b_valid        ),
+    .s_axi_bready   ( master[ariane_soc::FlashCTL].b_ready        ),
+    .s_axi_arid     ( master[ariane_soc::FlashCTL].ar_id          ),
+    .s_axi_araddr   ( master[ariane_soc::FlashCTL].ar_addr[31:0]  ),
+    .s_axi_arlen    ( master[ariane_soc::FlashCTL].ar_len         ),
+    .s_axi_arsize   ( master[ariane_soc::FlashCTL].ar_size        ),
+    .s_axi_arburst  ( master[ariane_soc::FlashCTL].ar_burst       ),
+    .s_axi_arlock   ( master[ariane_soc::FlashCTL].ar_lock        ),
+    .s_axi_arcache  ( master[ariane_soc::FlashCTL].ar_cache       ),
+    .s_axi_arprot   ( master[ariane_soc::FlashCTL].ar_prot        ),
+    .s_axi_arregion ( master[ariane_soc::FlashCTL].ar_region      ),
+    .s_axi_arqos    ( master[ariane_soc::FlashCTL].ar_qos         ),
+    .s_axi_arvalid  ( master[ariane_soc::FlashCTL].ar_valid       ),
+    .s_axi_arready  ( master[ariane_soc::FlashCTL].ar_ready       ),
+    .s_axi_rid      ( master[ariane_soc::FlashCTL].r_id           ),
+    .s_axi_rdata    ( master[ariane_soc::FlashCTL].r_data         ),
+    .s_axi_rresp    ( master[ariane_soc::FlashCTL].r_resp         ),
+    .s_axi_rlast    ( master[ariane_soc::FlashCTL].r_last         ),
+    .s_axi_rvalid   ( master[ariane_soc::FlashCTL].r_valid        ),
+    .s_axi_rready   ( master[ariane_soc::FlashCTL].r_ready        ),
+
+    .m_axi_awaddr   ( flash_ctrl_s_axi_spi_awaddr   ),
+    .m_axi_awlen    ( flash_ctrl_s_axi_spi_awlen    ),
+    .m_axi_awsize   ( flash_ctrl_s_axi_spi_awsize   ),
+    .m_axi_awburst  ( flash_ctrl_s_axi_spi_awburst  ),
+    .m_axi_awlock   ( flash_ctrl_s_axi_spi_awlock   ),
+    .m_axi_awcache  ( flash_ctrl_s_axi_spi_awcache  ),
+    .m_axi_awprot   ( flash_ctrl_s_axi_spi_awprot   ),
+    .m_axi_awregion ( flash_ctrl_s_axi_spi_awregion ),
+    .m_axi_awqos    ( flash_ctrl_s_axi_spi_awqos    ),
+    .m_axi_awvalid  ( flash_ctrl_s_axi_spi_awvalid  ),
+    .m_axi_awready  ( flash_ctrl_s_axi_spi_awready  ),
+    .m_axi_wdata    ( flash_ctrl_s_axi_spi_wdata    ),
+    .m_axi_wstrb    ( flash_ctrl_s_axi_spi_wstrb    ),
+    .m_axi_wlast    ( flash_ctrl_s_axi_spi_wlast    ),
+    .m_axi_wvalid   ( flash_ctrl_s_axi_spi_wvalid   ),
+    .m_axi_wready   ( flash_ctrl_s_axi_spi_wready   ),
+    .m_axi_bresp    ( flash_ctrl_s_axi_spi_bresp    ),
+    .m_axi_bvalid   ( flash_ctrl_s_axi_spi_bvalid   ),
+    .m_axi_bready   ( flash_ctrl_s_axi_spi_bready   ),
+    .m_axi_araddr   ( flash_ctrl_s_axi_spi_araddr   ),
+    .m_axi_arlen    ( flash_ctrl_s_axi_spi_arlen    ),
+    .m_axi_arsize   ( flash_ctrl_s_axi_spi_arsize   ),
+    .m_axi_arburst  ( flash_ctrl_s_axi_spi_arburst  ),
+    .m_axi_arlock   ( flash_ctrl_s_axi_spi_arlock   ),
+    .m_axi_arcache  ( flash_ctrl_s_axi_spi_arcache  ),
+    .m_axi_arprot   ( flash_ctrl_s_axi_spi_arprot   ),
+    .m_axi_arregion ( flash_ctrl_s_axi_spi_arregion ),
+    .m_axi_arqos    ( flash_ctrl_s_axi_spi_arqos    ),
+    .m_axi_arvalid  ( flash_ctrl_s_axi_spi_arvalid  ),
+    .m_axi_arready  ( flash_ctrl_s_axi_spi_arready  ),
+    .m_axi_rdata    ( flash_ctrl_s_axi_spi_rdata    ),
+    .m_axi_rresp    ( flash_ctrl_s_axi_spi_rresp    ),
+    .m_axi_rlast    ( flash_ctrl_s_axi_spi_rlast    ),
+    .m_axi_rvalid   ( flash_ctrl_s_axi_spi_rvalid   ),
+    .m_axi_rready   ( flash_ctrl_s_axi_spi_rready   )
+);
+
+// unused output port (AXI4 -> AXI4Lite)
+/*
+logic [7:0]  flash_ctrl_s_axi_spi_awlen;
+logic [2:0]  flash_ctrl_s_axi_spi_awsize;
+logic [1:0]  flash_ctrl_s_axi_spi_awburst;
+logic [0:0]  flash_ctrl_s_axi_spi_awlock;
+logic [3:0]  flash_ctrl_s_axi_spi_awcache;
+logic [2:0]  flash_ctrl_s_axi_spi_awprot;
+logic [3:0]  flash_ctrl_s_axi_spi_awregion;
+logic [3:0]  flash_ctrl_s_axi_spi_awqos;
+logic        flash_ctrl_s_axi_spi_wlast;
+logic [7:0]  flash_ctrl_s_axi_spi_arlen;
+logic [2:0]  flash_ctrl_s_axi_spi_arsize;
+logic [1:0]  flash_ctrl_s_axi_spi_arburst;
+logic [0:0]  flash_ctrl_s_axi_spi_arlock;
+logic [3:0]  flash_ctrl_s_axi_spi_arcache;
+logic [2:0]  flash_ctrl_s_axi_spi_arprot;
+logic [3:0]  flash_ctrl_s_axi_spi_arregion;
+logic [3:0]  flash_ctrl_s_axi_spi_arqos;
+*/
+assign flash_ctrl_s_axi_spi_rlast = 1'b1;
+
+logic flash_io0_i;
+logic flash_io0_o;
+logic flash_io0_t;
+logic flash_io1_i;
+logic flash_io1_o;
+logic flash_io1_t;
+logic flash_io2_i;
+logic flash_io2_o;
+logic flash_io2_t;
+logic flash_io3_i;
+logic flash_io3_o;
+logic flash_io3_t;
+logic flash_ss_i;
+logic flash_ss_o;
+logic flash_ss_t;
+
+nexys_video_axi_quad_spi_flash i_nexys_video_qspi_flash (
+    .ext_spi_clk    ( clk),
+    // AXI4Lite port for configuration register access
+    .s_axi_aclk     ( clk                    ),
+    .s_axi_aresetn  ( ndmreset_n             ),
+    .s_axi_awaddr   ( flash_ctrl_s_axi_spi_awaddr  ),
+    .s_axi_awvalid  ( flash_ctrl_s_axi_spi_awvalid ),
+    .s_axi_awready  ( flash_ctrl_s_axi_spi_awready ),
+    .s_axi_wdata    ( flash_ctrl_s_axi_spi_wdata   ),
+    .s_axi_wstrb    ( flash_ctrl_s_axi_spi_wstrb   ),
+    .s_axi_wvalid   ( flash_ctrl_s_axi_spi_wvalid  ),
+    .s_axi_wready   ( flash_ctrl_s_axi_spi_wready  ),
+    .s_axi_bresp    ( flash_ctrl_s_axi_spi_bresp   ),
+    .s_axi_bvalid   ( flash_ctrl_s_axi_spi_bvalid  ),
+    .s_axi_bready   ( flash_ctrl_s_axi_spi_bready  ),
+    .s_axi_araddr   ( flash_ctrl_s_axi_spi_araddr  ),
+    .s_axi_arvalid  ( flash_ctrl_s_axi_spi_arvalid ),
+    .s_axi_arready  ( flash_ctrl_s_axi_spi_arready ),
+    .s_axi_rdata    ( flash_ctrl_s_axi_spi_rdata   ),
+    .s_axi_rresp    ( flash_ctrl_s_axi_spi_rresp   ),
+    .s_axi_rvalid   ( flash_ctrl_s_axi_spi_rvalid  ),
+    .s_axi_rready   ( flash_ctrl_s_axi_spi_rready  ),
+    // AXI4 port for data access (XIP)
+    .s_axi4_aclk    ( clk                    ),
+    .s_axi4_aresetn ( ndmreset_n             ),
+    .s_axi4_awaddr  ( flash_s_axi_spi_awaddr[24:0] ),
+    .s_axi4_awlen   ( flash_s_axi_spi_awlen        ),
+    .s_axi4_awsize  ( flash_s_axi_spi_awsize       ),
+    .s_axi4_awburst ( flash_s_axi_spi_awburst      ),
+    .s_axi4_awlock  ( flash_s_axi_spi_awlock       ),
+    .s_axi4_awcache ( flash_s_axi_spi_awcache      ),
+    .s_axi4_awprot  ( flash_s_axi_spi_awprot       ),
+    .s_axi4_awvalid ( flash_s_axi_spi_awvalid      ),
+    .s_axi4_awready ( flash_s_axi_spi_awready      ),
+    .s_axi4_wdata   ( flash_s_axi_spi_wdata        ),
+    .s_axi4_wstrb   ( flash_s_axi_spi_wstrb        ),
+    .s_axi4_wlast   ( flash_s_axi_spi_wlast        ),
+    .s_axi4_wvalid  ( flash_s_axi_spi_wvalid       ),
+    .s_axi4_wready  ( flash_s_axi_spi_wready       ),
+    .s_axi4_bresp   ( flash_s_axi_spi_bresp        ),
+    .s_axi4_bvalid  ( flash_s_axi_spi_bvalid       ),
+    .s_axi4_bready  ( flash_s_axi_spi_bready       ),
+    .s_axi4_araddr  ( flash_s_axi_spi_araddr[24:0] ),
+    .s_axi4_arlen   ( flash_s_axi_spi_arlen        ),
+    .s_axi4_arsize  ( flash_s_axi_spi_arsize       ),
+    .s_axi4_arburst ( flash_s_axi_spi_arburst      ),
+    .s_axi4_arlock  ( flash_s_axi_spi_arlock       ),
+    .s_axi4_arcache ( flash_s_axi_spi_arcache      ),
+    .s_axi4_arprot  ( flash_s_axi_spi_arprot       ),
+    .s_axi4_arvalid ( flash_s_axi_spi_arvalid      ),
+    .s_axi4_arready ( flash_s_axi_spi_arready      ),
+    .s_axi4_rdata   ( flash_s_axi_spi_rdata        ),
+    .s_axi4_rresp   ( flash_s_axi_spi_rresp        ),
+    .s_axi4_rlast   ( flash_s_axi_spi_rlast        ),
+    .s_axi4_rvalid  ( flash_s_axi_spi_rvalid       ),
+    .s_axi4_rready  ( flash_s_axi_spi_rready       ),
+    // QSPI interface
+    .io0_i          ( flash_io0_i                  ),
+    .io0_o          ( flash_io0_o                  ),
+    .io0_t          ( flash_io0_t                  ),
+    .io1_i          ( flash_io1_i                  ),
+    .io1_o          ( flash_io1_o                  ),
+    .io1_t          ( flash_io1_t                  ),
+    .io2_i          ( flash_io2_i                  ),
+    .io2_o          ( flash_io2_o                  ),
+    .io2_t          ( flash_io2_t                  ),
+    .io3_i          ( flash_io3_i                  ),
+    .io3_o          ( flash_io3_o                  ),
+    .io3_t          ( flash_io3_t                  ),
+    .ss_i           ( flash_ss_i                  ),
+    .ss_o           ( flash_ss_o                   ),
+    .ss_t           ( flash_ss_t                   ),
+    // STARTUP extra output (leave unconnected)
+    .cfgclk         (                              ),
+    .cfgmclk        (                              ),
+    .eos            (                              ),
+    .preq           (                              ),
+    // interrupt disabled
+    .ip2intc_irpt   (                              )
+);
+
+IOBUF #(
+    .DRIVE      ( 12        ),
+    .IOSTANDARD ( "DEFAULT" ),
+    .SLEW       ( "SLOW"    )
+) i_iobuf_flash_ss (
+    .I  ( flash_ss_o  ),
+    .O  ( flash_ss_i  ),
+    .T  ( flash_ss_t  ),
+    .IO ( flash_ss    )
+);
+
+IOBUF #(
+    .DRIVE      ( 12        ),
+    .IOSTANDARD ( "DEFAULT" ),
+    .SLEW       ( "SLOW"    )
+) i_iobuf_flash_dq0 (
+    .I  ( flash_io0_o ),
+    .O  ( flash_io0_i ),
+    .T  ( flash_io0_t ),
+    .IO ( flash_dq[0] )
+);
+
+IOBUF #(
+    .DRIVE      ( 12        ),
+    .IOSTANDARD ( "DEFAULT" ),
+    .SLEW       ( "SLOW"    )
+) i_iobuf_flash_dq1 (
+    .I  ( flash_io1_o ),
+    .O  ( flash_io1_i ),
+    .T  ( flash_io1_t ),
+    .IO ( flash_dq[1] )
+);
+
+IOBUF #(
+    .DRIVE      ( 12        ),
+    .IOSTANDARD ( "DEFAULT" ),
+    .SLEW       ( "SLOW"    )
+) i_iobuf_flash_dq2 (
+    .I  ( flash_io2_o ),
+    .O  ( flash_io2_i ),
+    .T  ( flash_io2_t ),
+    .IO ( flash_dq[2] )
+);
+
+IOBUF #(
+    .DRIVE      ( 12        ),
+    .IOSTANDARD ( "DEFAULT" ),
+    .SLEW       ( "SLOW"    )
+) i_iobuf_flash_dq3 (
+    .I  ( flash_io3_o ),
+    .O  ( flash_io3_i ),
+    .T  ( flash_io3_t ),
+    .IO ( flash_dq[3] )
+);
+
+`endif
 `endif
 
 endmodule

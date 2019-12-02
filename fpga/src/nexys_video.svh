@@ -27,6 +27,6 @@
 // avoid timing violations in FPU
 `define FPU_SLOWER
 
-// generate embedded rom
-`define EMBED_PAYLOAD_ROM
+// also add QSPI flash as peripheral
+`define ADD_FLASH_PERIPHERAL
 
