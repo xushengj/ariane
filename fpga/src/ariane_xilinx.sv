@@ -111,6 +111,13 @@ module ariane_xilinx (
   input  logic [ 7:0]  sw          ,
   output logic         fan_pwm     ,
   input  logic         trst        ,
+
+  inout  wire  [15:0]  flash_dq    ,
+  output logic [25:0]  flash_addr  ,
+  output logic         flash_we_b  ,
+  output logic         flash_oe_b  ,
+  output logic         flash_ce_b  ,
+  output logic         flash_adv_b ,
 `elsif VCU118
   input  wire          c0_sys_clk_p    ,  // 250 MHz Clock for DDR
   input  wire          c0_sys_clk_n    ,  // 250 MHz Clock for DDR
@@ -307,6 +314,7 @@ axi_node_wrap_with_slices #(
         ariane_soc::SPIBase,
         ariane_soc::EthernetBase,
         ariane_soc::GPIOBase,
+        ariane_soc::FlashBase,
         ariane_soc::DRAMBase
     }),
     .end_addr_i   ({
@@ -318,6 +326,7 @@ axi_node_wrap_with_slices #(
         ariane_soc::SPIBase      + ariane_soc::SPILength - 1,
         ariane_soc::EthernetBase + ariane_soc::EthernetLength -1,
         ariane_soc::GPIOBase     + ariane_soc::GPIOLength - 1,
+        ariane_soc::FlashBase    + ariane_soc::FlashLength - 1,
         ariane_soc::DRAMBase     + ariane_soc::DRAMLength - 1
     }),
     .valid_rule_i (ariane_soc::ValidRule)
@@ -999,6 +1008,129 @@ xlnx_mig_7_ddr3 i_ddr (
     .device_temp         (            ), // keep open
     .sys_rst             ( cpu_resetn )
 );
+
+// Linear BPI flash
+
+// lowest address bit is ignored
+logic        flash_unused_addr0;
+
+// for IOBUF insertion
+logic [15:0] flash_dq_i;
+logic [15:0] flash_dq_o;
+logic [15:0] flash_dq_t;
+
+// apb bus interface
+logic         flash_penable;
+logic         flash_pwrite;
+logic [31:0]  flash_paddr;
+logic         flash_psel;
+logic [31:0]  flash_pwdata;
+logic [31:0]  flash_prdata;
+logic         flash_pready;
+logic         flash_pslverr;
+
+axi2apb_64_32 #(
+    .AXI4_ADDRESS_WIDTH     ( AxiAddrWidth               ),
+    .AXI4_RDATA_WIDTH       ( AxiDataWidth               ),
+    .AXI4_WDATA_WIDTH       ( AxiDataWidth               ),
+    .AXI4_USER_WIDTH        ( AxiUserWidth               ),
+    .AXI4_ID_WIDTH          ( AxiIdWidthSlaves           ),
+    .BUFF_DEPTH_SLAVE   ( 2             ),
+    .APB_ADDR_WIDTH     ( 32            )
+) i_axi2apb_emc (
+    .ACLK      ( clk_i          ),
+    .ARESETn   ( ndmreset_n     ),
+    .test_en_i ( 1'b0           ),
+    .AWID_i    ( master[ariane_soc::Flash].aw_id     ),
+    .AWADDR_i  ( master[ariane_soc::Flash].aw_addr   ),
+    .AWLEN_i   ( master[ariane_soc::Flash].aw_len    ),
+    .AWSIZE_i  ( master[ariane_soc::Flash].aw_size   ),
+    .AWBURST_i ( master[ariane_soc::Flash].aw_burst  ),
+    .AWLOCK_i  ( master[ariane_soc::Flash].aw_lock   ),
+    .AWCACHE_i ( master[ariane_soc::Flash].aw_cache  ),
+    .AWPROT_i  ( master[ariane_soc::Flash].aw_prot   ),
+    .AWREGION_i( master[ariane_soc::Flash].aw_region ),
+    .AWUSER_i  ( master[ariane_soc::Flash].aw_user   ),
+    .AWQOS_i   ( master[ariane_soc::Flash].aw_qos    ),
+    .AWVALID_i ( master[ariane_soc::Flash].aw_valid  ),
+    .AWREADY_o ( master[ariane_soc::Flash].aw_ready  ),
+    .WDATA_i   ( master[ariane_soc::Flash].w_data    ),
+    .WSTRB_i   ( master[ariane_soc::Flash].w_strb    ),
+    .WLAST_i   ( master[ariane_soc::Flash].w_last    ),
+    .WUSER_i   ( master[ariane_soc::Flash].w_user    ),
+    .WVALID_i  ( master[ariane_soc::Flash].w_valid   ),
+    .WREADY_o  ( master[ariane_soc::Flash].w_ready   ),
+    .BID_o     ( master[ariane_soc::Flash].b_id      ),
+    .BRESP_o   ( master[ariane_soc::Flash].b_resp    ),
+    .BVALID_o  ( master[ariane_soc::Flash].b_valid   ),
+    .BUSER_o   ( master[ariane_soc::Flash].b_user    ),
+    .BREADY_i  ( master[ariane_soc::Flash].b_ready   ),
+    .ARID_i    ( master[ariane_soc::Flash].ar_id     ),
+    .ARADDR_i  ( master[ariane_soc::Flash].ar_addr   ),
+    .ARLEN_i   ( master[ariane_soc::Flash].ar_len    ),
+    .ARSIZE_i  ( master[ariane_soc::Flash].ar_size   ),
+    .ARBURST_i ( master[ariane_soc::Flash].ar_burst  ),
+    .ARLOCK_i  ( master[ariane_soc::Flash].ar_lock   ),
+    .ARCACHE_i ( master[ariane_soc::Flash].ar_cache  ),
+    .ARPROT_i  ( master[ariane_soc::Flash].ar_prot   ),
+    .ARREGION_i( master[ariane_soc::Flash].ar_region ),
+    .ARUSER_i  ( master[ariane_soc::Flash].ar_user   ),
+    .ARQOS_i   ( master[ariane_soc::Flash].ar_qos    ),
+    .ARVALID_i ( master[ariane_soc::Flash].ar_valid  ),
+    .ARREADY_o ( master[ariane_soc::Flash].ar_ready  ),
+    .RID_o     ( master[ariane_soc::Flash].r_id      ),
+    .RDATA_o   ( master[ariane_soc::Flash].r_data    ),
+    .RRESP_o   ( master[ariane_soc::Flash].r_resp    ),
+    .RLAST_o   ( master[ariane_soc::Flash].r_last    ),
+    .RUSER_o   ( master[ariane_soc::Flash].r_user    ),
+    .RVALID_o  ( master[ariane_soc::Flash].r_valid   ),
+    .RREADY_i  ( master[ariane_soc::Flash].r_ready   ),
+    .PENABLE   ( flash_penable   ),
+    .PWRITE    ( flash_pwrite    ),
+    .PADDR     ( flash_paddr     ),
+    .PSEL      ( flash_psel      ),
+    .PWDATA    ( flash_pwdata    ),
+    .PRDATA    ( flash_prdata    ),
+    .PREADY    ( flash_pready    ),
+    .PSLVERR   ( flash_pslverr   )
+);
+
+ariane_emc i_emc (
+    .clk        ( clk_i         ),
+    .rstn       ( ndmreset_n    ),
+
+    .penable    ( flash_penable ),
+    .pwrite     ( flash_pwrite  ),
+    .paddr      ( flash_paddr   ),
+    .psel       ( flash_psel    ),
+    .pwdata     ( flash_pwdata  ),
+    .prdata     ( flash_prdata  ),
+    .pready     ( flash_pready  ),
+    .pslverr    ( flash_pslverr ),
+
+    .flash_dq_i ( flash_dq_i    ),
+    .flash_dq_o ( flash_dq_o    ),
+    .flash_dq_t ( flash_dq_t    ),
+    .flash_a    ( {flash_addr, flash_unused_addr0}  ),
+    .flash_we_b ( flash_we_b    ),
+    .flash_oe_b ( flash_oe_b    ),
+    .flash_ce_b ( flash_ce_b    ),
+    .flash_adv_b( flash_adv_b   ),
+    .flash_wait ( 1'b0          )
+);
+
+genvar gi;
+generate
+  for (gi = 0; gi < 16; gi = gi+1) begin
+    IOBUF i_flash_dq_iobuf (
+      .I ( flash_dq_o[gi]),
+      .O ( flash_dq_i[gi]),
+      .T ( flash_dq_t[gi]),
+      .IO( flash_dq  [gi])
+    );
+  end
+endgenerate
+
 `elsif VCU118
 
   logic [63:0]  dram_dwidth_axi_awaddr;

@@ -114,6 +114,72 @@ set_property -dict {PACKAGE_PIN AP30 IOSTANDARD LVCMOS18} [get_ports spi_mosi]
 # Genesys 2 has a quad SPI flash
 # set_property BITSTREAM.CONFIG.SPI_BUSWIDTH 4 [current_design]
 
+## bpi flash
+set_property -dict { PACKAGE_PIN AM36 IOSTANDARD LVCMOS18}    [get_ports {flash_dq[0]}]; # FLASH_D0
+set_property -dict { PACKAGE_PIN AN36 IOSTANDARD LVCMOS18}    [get_ports {flash_dq[1]}]; # FLASH_D1
+set_property -dict { PACKAGE_PIN AJ36 IOSTANDARD LVCMOS18}    [get_ports {flash_dq[2]}]; # FLASH_D2
+set_property -dict { PACKAGE_PIN AJ37 IOSTANDARD LVCMOS18}    [get_ports {flash_dq[3]}]; # FLASH_D3
+set_property -dict { PACKAGE_PIN AK37 IOSTANDARD LVCMOS18}    [get_ports {flash_dq[4]}]; # FLASH_D4
+set_property -dict { PACKAGE_PIN AL37 IOSTANDARD LVCMOS18}    [get_ports {flash_dq[5]}]; # FLASH_D5
+set_property -dict { PACKAGE_PIN AN35 IOSTANDARD LVCMOS18}    [get_ports {flash_dq[6]}]; # FLASH_D6
+set_property -dict { PACKAGE_PIN AP35 IOSTANDARD LVCMOS18}    [get_ports {flash_dq[7]}]; # FLASH_D7
+set_property -dict { PACKAGE_PIN AM37 IOSTANDARD LVCMOS18}    [get_ports {flash_dq[8]}]; # FLASH_D8
+set_property -dict { PACKAGE_PIN AG33 IOSTANDARD LVCMOS18}    [get_ports {flash_dq[9]}]; # FLASH_D9
+set_property -dict { PACKAGE_PIN AH33 IOSTANDARD LVCMOS18}    [get_ports {flash_dq[10]}]; # FLASH_D10
+set_property -dict { PACKAGE_PIN AK35 IOSTANDARD LVCMOS18}    [get_ports {flash_dq[11]}]; # FLASH_D11
+set_property -dict { PACKAGE_PIN AL35 IOSTANDARD LVCMOS18}    [get_ports {flash_dq[12]}]; # FLASH_D12
+set_property -dict { PACKAGE_PIN AJ31 IOSTANDARD LVCMOS18}    [get_ports {flash_dq[13]}]; # FLASH_D13
+set_property -dict { PACKAGE_PIN AH34 IOSTANDARD LVCMOS18}    [get_ports {flash_dq[14]}]; # FLASH_D14
+set_property -dict { PACKAGE_PIN AJ35 IOSTANDARD LVCMOS18}    [get_ports {flash_dq[15]}]; # FLASH_D15
+
+set_property -dict { PACKAGE_PIN AW41 IOSTANDARD LVCMOS18}    [get_ports {flash_addr[25]}]; # FLASH_A25
+set_property -dict { PACKAGE_PIN AW42 IOSTANDARD LVCMOS18}    [get_ports {flash_addr[24]}]; # FLASH_A24
+set_property -dict { PACKAGE_PIN BB39 IOSTANDARD LVCMOS18}    [get_ports {flash_addr[23]}]; # FLASH_A23
+set_property -dict { PACKAGE_PIN BA39 IOSTANDARD LVCMOS18}    [get_ports {flash_addr[22]}]; # FLASH_A22
+set_property -dict { PACKAGE_PIN BA40 IOSTANDARD LVCMOS18}    [get_ports {flash_addr[21]}]; # FLASH_A21
+set_property -dict { PACKAGE_PIN AT41 IOSTANDARD LVCMOS18}    [get_ports {flash_addr[20]}]; # FLASH_A20
+set_property -dict { PACKAGE_PIN AU42 IOSTANDARD LVCMOS18}    [get_ports {flash_addr[19]}]; # FLASH_A19
+set_property -dict { PACKAGE_PIN BA42 IOSTANDARD LVCMOS18}    [get_ports {flash_addr[18]}]; # FLASH_A18
+set_property -dict { PACKAGE_PIN AU41 IOSTANDARD LVCMOS18}    [get_ports {flash_addr[17]}]; # FLASH_A17
+set_property -dict { PACKAGE_PIN AV41 IOSTANDARD LVCMOS18}    [get_ports {flash_addr[16]}]; # FLASH_A16
+set_property -dict { PACKAGE_PIN AM32 IOSTANDARD LVCMOS18}    [get_ports {flash_addr[15]}]; # FLASH_A15
+set_property -dict { PACKAGE_PIN AM33 IOSTANDARD LVCMOS18}    [get_ports {flash_addr[14]}]; # FLASH_A14
+set_property -dict { PACKAGE_PIN AN33 IOSTANDARD LVCMOS18}    [get_ports {flash_addr[13]}]; # FLASH_A13
+set_property -dict { PACKAGE_PIN AL29 IOSTANDARD LVCMOS18}    [get_ports {flash_addr[12]}]; # FLASH_A12
+set_property -dict { PACKAGE_PIN AL30 IOSTANDARD LVCMOS18}    [get_ports {flash_addr[11]}]; # FLASH_A11
+set_property -dict { PACKAGE_PIN AH29 IOSTANDARD LVCMOS18}    [get_ports {flash_addr[10]}]; # FLASH_A10
+set_property -dict { PACKAGE_PIN AH30 IOSTANDARD LVCMOS18}    [get_ports {flash_addr[9]}]; # FLASH_A9
+set_property -dict { PACKAGE_PIN AJ30 IOSTANDARD LVCMOS18}    [get_ports {flash_addr[8]}]; # FLASH_A8
+set_property -dict { PACKAGE_PIN AK30 IOSTANDARD LVCMOS18}    [get_ports {flash_addr[7]}]; # FLASH_A7
+set_property -dict { PACKAGE_PIN AG29 IOSTANDARD LVCMOS18}    [get_ports {flash_addr[6]}]; # FLASH_A6
+set_property -dict { PACKAGE_PIN AK28 IOSTANDARD LVCMOS18}    [get_ports {flash_addr[5]}]; # FLASH_A5
+set_property -dict { PACKAGE_PIN AK29 IOSTANDARD LVCMOS18}    [get_ports {flash_addr[4]}]; # FLASH_A4
+set_property -dict { PACKAGE_PIN AF30 IOSTANDARD LVCMOS18}    [get_ports {flash_addr[3]}]; # FLASH_A3
+set_property -dict { PACKAGE_PIN AG31 IOSTANDARD LVCMOS18}    [get_ports {flash_addr[2]}]; # FLASH_A2
+set_property -dict { PACKAGE_PIN AH28 IOSTANDARD LVCMOS18}    [get_ports {flash_addr[1]}]; # FLASH_A1
+set_property -dict { PACKAGE_PIN AJ28 IOSTANDARD LVCMOS18}    [get_ports {flash_addr[0]}]; # FLASH_A0
+
+#set_property -dict { PACKAGE_PIN AM34 IOSTANDARD LVCMOS18}    [get_ports flash_wait]; # FLASH_WAIT
+set_property -dict { PACKAGE_PIN BB41 IOSTANDARD LVCMOS18}    [get_ports flash_we_b]; # FLASH_FWE_B
+set_property -dict { PACKAGE_PIN BA41 IOSTANDARD LVCMOS18}    [get_ports flash_oe_b]; # FLASH_OE_B
+set_property -dict { PACKAGE_PIN AL36 IOSTANDARD LVCMOS18}    [get_ports flash_ce_b]; # FLASH_CE_B
+set_property -dict { PACKAGE_PIN AY37 IOSTANDARD LVCMOS18}    [get_ports flash_adv_b]; # FLASH_ADV_B
+#set_property -dict { PACKAGE_PIN AG11 IOSTANDARD LVCMOS18}    [get_ports flash_rst_b]; # FPGA_INIT_B
+
+# not used
+#set_property -dict { PACKAGE_PIN AP37 IOSTANDARD LVCMOS18}    [get_ports FPGA_EMCCLK];
+
+set_property BITSTREAM.CONFIG.BPI_SYNC_MODE DISABLE     [current_design]
+set_property BITSTREAM.CONFIG.EXTMASTERCCLK_EN DISABLE  [current_design]
+# constraints from BIST example
+#set_property BITSTREAM.CONFIG.BPI_SYNC_MODE Type1       [current_design]
+#set_property BITSTREAM.CONFIG.EXTMASTERCCLK_EN div-1    [current_design]
+set_property BITSTREAM.GENERAL.COMPRESS TRUE            [current_design]
+set_property BITSTREAM.CONFIG.UNUSEDPIN Pullup          [current_design]
+set_property CONFIG_MODE BPI16                          [current_design]
+set_property CFGBVS GND                                 [current_design]
+set_property CONFIG_VOLTAGE 1.8                         [current_design]
+
 ## JTAG
 # minimize routing delay
 

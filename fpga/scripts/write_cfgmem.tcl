@@ -29,7 +29,7 @@ lassign $argv mcsfile bitfile
 if {$::env(BOARD) eq "genesys2"} {
     write_cfgmem -format mcs -interface SPIx4 -size 256  -loadbit "up 0x0 $bitfile" -file $mcsfile -force
 } elseif {$::env(BOARD) eq "vc707"} {
-    write_cfgmem -format mcs -interface bpix16 -size 128 -loadbit "up 0x0 $bitfile" -file $mcsfile -force
+    write_cfgmem -format mcs -interface bpix16 -size 128 -loadbit "up 0x0 $bitfile" -loaddata "up 0x00800000 bbl.bin" -file $mcsfile -force
 } elseif {$::env(BOARD) eq "nexys_video"} {
     write_cfgmem -format mcs -interface SPIx4 -size 256  -loadbit "up 0x0 $bitfile" -file $mcsfile -force
 } else {
