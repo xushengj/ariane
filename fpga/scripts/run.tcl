@@ -36,6 +36,10 @@ read_ip xilinx/xlnx_axi_quad_spi/ip/xlnx_axi_quad_spi.xci
 read_ip xilinx/xlnx_clk_gen/ip/xlnx_clk_gen.xci
 # read_ip xilinx/xlnx_protocol_checker/ip/xlnx_protocol_checker.xci
 
+if {$::env(BOARD) eq "vc707"} {
+      read_ip xilinx/vc707_ila/ip/vc707_ila.xci
+}
+
 set_property include_dirs { "src/axi_sd_bridge/include" "../src/common_cells/include" } [current_fileset]
 
 source scripts/add_sources.tcl

@@ -12,6 +12,11 @@ ips := xlnx_axi_clock_converter.xci  \
        xlnx_clk_gen.xci              \
        xlnx_mig_7_ddr3.xci
 
+# board dependent IPs
+ifeq ($(BOARD), vc707)
+ips += vc707_ila.xci
+endif
+
 ips := $(addprefix $(work-dir)/, $(ips))
 ips-target := $(join $(addsuffix /ip/, $(addprefix $(ip-dir)/, $(basename $(ips)))), $(ips))
 

@@ -1029,6 +1029,8 @@ logic [31:0]  flash_prdata;
 logic         flash_pready;
 logic         flash_pslverr;
 
+//`define DUMMY_FLASH_TEST
+`ifndef DUMMY_FLASH_TEST
 axi2apb_64_32 #(
     .AXI4_ADDRESS_WIDTH     ( AxiAddrWidth               ),
     .AXI4_RDATA_WIDTH       ( AxiDataWidth               ),
@@ -1095,7 +1097,7 @@ axi2apb_64_32 #(
     .PSLVERR   ( flash_pslverr   )
 );
 
-ariane_emc i_emc (
+ariane_emc_dummy i_emc (
     .clk        ( clk_i         ),
     .rstn       ( ndmreset_n    ),
 
@@ -1118,6 +1120,42 @@ ariane_emc i_emc (
     .flash_adv_b( flash_adv_b   ),
     .flash_wait ( 1'b0          )
 );
+`else
+
+logic                    flashtest_rom_req;
+logic [AxiAddrWidth-1:0] flashtest_rom_addr;
+logic [AxiDataWidth-1:0] flashtest_rom_rdata;
+axi2mem #(
+    .AXI_ID_WIDTH   ( AxiIdWidthSlaves ),
+    .AXI_ADDR_WIDTH ( AxiAddrWidth     ),
+    .AXI_DATA_WIDTH ( AxiDataWidth     ),
+    .AXI_USER_WIDTH ( AxiUserWidth     )
+) i_axi2rom_flashtest (
+    .clk_i  ( clk                     ),
+    .rst_ni ( ndmreset_n              ),
+    .slave  ( master[ariane_soc::Flash] ),
+    .req_o  ( flashtest_rom_req                 ),
+    .we_o   (                         ),
+    .addr_o ( flashtest_rom_addr                ),
+    .be_o   (                         ),
+    .data_o (                         ),
+    .data_i ( flashtest_rom_rdata               )
+);
+
+bootrom i_bootrom_flashtest (
+    .clk_i   ( clk       ),
+    .req_i   ( flashtest_rom_req   ),
+    .addr_i  ( flashtest_rom_addr  ),
+    .rdata_o ( flashtest_rom_rdata )
+);
+assign flash_dq_o = '0;
+assign flash_dq_t = '1;
+assign flash_addr = '0;
+assign flash_we_b = '1;
+assign flash_oe_b = '1;
+assign flash_ce_b = '1;
+assign flash_adv_b= '1;
+`endif
 
 genvar gi;
 generate
@@ -1130,6 +1168,98 @@ generate
     );
   end
 endgenerate
+
+// ILA
+(* mark_debug = "true" *) logic [4:0]  flash_aw_id;
+(* mark_debug = "true" *) logic [63:0] flash_aw_addr;
+(* mark_debug = "true" *) logic [7:0]  flash_aw_len;
+(* mark_debug = "true" *) logic [2:0]  flash_aw_size;
+(* mark_debug = "true" *) logic        flash_aw_user;
+(* mark_debug = "true" *) logic        flash_aw_valid;
+(* mark_debug = "true" *) logic        flash_aw_ready;
+(* mark_debug = "true" *) logic [63:0] flash_w_data;
+(* mark_debug = "true" *) logic        flash_w_last;
+(* mark_debug = "true" *) logic        flash_w_user;
+(* mark_debug = "true" *) logic        flash_w_valid;
+(* mark_debug = "true" *) logic        flash_w_ready;
+(* mark_debug = "true" *) logic        flash_b_user;
+(* mark_debug = "true" *) logic        flash_b_valid;
+(* mark_debug = "true" *) logic        flash_b_ready;
+(* mark_debug = "true" *) logic [4:0]  flash_ar_id;
+(* mark_debug = "true" *) logic [63:0] flash_ar_addr;
+(* mark_debug = "true" *) logic [7:0]  flash_ar_len;
+(* mark_debug = "true" *) logic [2:0]  flash_ar_size;
+(* mark_debug = "true" *) logic        flash_ar_user;
+(* mark_debug = "true" *) logic        flash_ar_valid;
+(* mark_debug = "true" *) logic        flash_ar_ready;
+(* mark_debug = "true" *) logic [4:0]  flash_r_id;
+(* mark_debug = "true" *) logic        flash_r_data;
+(* mark_debug = "true" *) logic        flash_r_last;
+(* mark_debug = "true" *) logic        flash_r_user;
+(* mark_debug = "true" *) logic        flash_r_valid;
+(* mark_debug = "true" *) logic        flash_r_ready;
+
+assign flash_aw_id    = master[ariane_soc::Flash].aw_id;
+assign flash_aw_addr  = master[ariane_soc::Flash].aw_addr;
+assign flash_aw_len   = master[ariane_soc::Flash].aw_len;
+assign flash_aw_size  = master[ariane_soc::Flash].aw_size;
+assign flash_aw_user  = master[ariane_soc::Flash].aw_user;
+assign flash_aw_valid = master[ariane_soc::Flash].aw_valid;
+assign flash_aw_ready = master[ariane_soc::Flash].aw_ready;
+assign flash_w_data   = master[ariane_soc::Flash].w_data;
+assign flash_w_last   = master[ariane_soc::Flash].w_last;
+assign flash_w_user   = master[ariane_soc::Flash].w_user;
+assign flash_w_valid  = master[ariane_soc::Flash].w_valid;
+assign flash_w_ready  = master[ariane_soc::Flash].w_ready;
+assign flash_b_user   = master[ariane_soc::Flash].b_user;
+assign flash_b_valid  = master[ariane_soc::Flash].b_valid;
+assign flash_b_ready  = master[ariane_soc::Flash].b_ready;
+assign flash_ar_id    = master[ariane_soc::Flash].ar_id;
+assign flash_ar_addr  = master[ariane_soc::Flash].ar_addr;
+assign flash_ar_len   = master[ariane_soc::Flash].ar_len;
+assign flash_ar_size  = master[ariane_soc::Flash].ar_size;
+assign flash_ar_user  = master[ariane_soc::Flash].ar_user;
+assign flash_ar_valid = master[ariane_soc::Flash].ar_valid;
+assign flash_ar_ready = master[ariane_soc::Flash].ar_ready;
+assign flash_r_id     = master[ariane_soc::Flash].r_id;
+assign flash_r_data   = master[ariane_soc::Flash].r_data;
+assign flash_r_last   = master[ariane_soc::Flash].r_last;
+assign flash_r_user   = master[ariane_soc::Flash].r_user;
+assign flash_r_valid  = master[ariane_soc::Flash].r_valid;
+assign flash_r_ready  = master[ariane_soc::Flash].r_ready;
+
+// ILA
+vc707_ila i_ila_flash(
+.clk (ddr_clock_out),
+.probe0  ( flash_aw_id    ),
+.probe1  ( flash_aw_addr  ),
+.probe2  ( flash_aw_len   ),
+.probe3  ( flash_aw_size  ),
+.probe4  ( flash_aw_user  ),
+.probe5  ( flash_aw_valid ),
+.probe6  ( flash_aw_ready ),
+.probe7  ( flash_w_data   ),
+.probe8  ( flash_w_last   ),
+.probe9  ( flash_w_user   ),
+.probe10 ( flash_w_valid  ),
+.probe11 ( flash_w_ready  ),
+.probe12 ( flash_b_user   ),
+.probe13 ( flash_b_valid  ),
+.probe14 ( flash_b_ready  ),
+.probe15 ( flash_ar_id    ),
+.probe16 ( flash_ar_addr  ),
+.probe17 ( flash_ar_len   ),
+.probe18 ( flash_ar_size  ),
+.probe19 ( flash_ar_user  ),
+.probe20 ( flash_ar_valid ),
+.probe21 ( flash_ar_ready ),
+.probe22 ( flash_r_id     ),
+.probe23 ( flash_r_data   ),
+.probe24 ( flash_r_last   ),
+.probe25 ( flash_r_user   ),
+.probe26 ( flash_r_valid  ),
+.probe27 ( flash_r_ready  )
+);
 
 `elsif VCU118
 
