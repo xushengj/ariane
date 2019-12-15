@@ -15,6 +15,7 @@ ips := xlnx_axi_clock_converter.xci  \
 # board dependent IPs
 ifeq ($(BOARD), vc707)
 ips += vc707_ila.xci
+ips += vc709_axi_emc.xci
 endif
 
 ips := $(addprefix $(work-dir)/, $(ips))

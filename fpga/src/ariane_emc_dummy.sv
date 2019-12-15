@@ -29,11 +29,13 @@ logic [26:0] flash_read_addr;
 logic        flash_read_req;
 logic        flash_read_valid;
 
-assign flash_a = flash_read_addr;
+//assign flash_a = flash_read_addr;
+assign flash_a = '0;
 assign flash_dq_o = '0;
 assign flash_dq_t = '1;
 assign flash_we_b = '1;
-assign flash_adv_b = '0;
+//assign flash_adv_b = '0;
+assign flash_adv_b = '1;
 logic [15:0] data_q;
 assign data_q = 16'hdead;
 
@@ -48,6 +50,12 @@ end
 
 logic flash_read_addr_sel;
 assign flash_read_addr = {paddr[26:2], flash_read_addr_sel, 1'b0};
+
+assign flash_read_addr_sel = 0;
+assign prdata = 32'hdeadbeef;
+assign pready = 1'b1;
+assign pslverr = 1'b0;
+/*
 
 logic [15:0] data_hw_lo_d, data_hw_lo_q;
 logic [15:0] data_hw_hi_d, data_hw_hi_q;
@@ -119,5 +127,6 @@ always_ff @(posedge clk) begin
     data_hw_hi_q            <= data_hw_hi_d;
   end
 end
+*/
 
 endmodule

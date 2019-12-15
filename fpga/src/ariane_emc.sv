@@ -40,7 +40,7 @@ logic data_en;
 assign data_d = data_en? flash_dq_i : data_q;
 
 // 50MHz clock (20ns cycle), 96ns to get data
-localparam int unsigned FLASH_READ_WAIT_CYCLE = 6;
+localparam int unsigned FLASH_READ_WAIT_CYCLE = 5*40;
 
 logic [$clog2(FLASH_READ_WAIT_CYCLE+1)-1:0] flash_wait_cycle_d, flash_wait_cycle_q;
 

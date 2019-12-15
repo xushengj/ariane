@@ -38,6 +38,7 @@ read_ip xilinx/xlnx_clk_gen/ip/xlnx_clk_gen.xci
 
 if {$::env(BOARD) eq "vc707"} {
       read_ip xilinx/vc707_ila/ip/vc707_ila.xci
+      read_ip xilinx/vc709_axi_emc/ip/vc709_axi_emc.xci
 }
 
 set_property include_dirs { "src/axi_sd_bridge/include" "../src/common_cells/include" } [current_fileset]

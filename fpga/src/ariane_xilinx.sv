@@ -1019,6 +1019,8 @@ logic [15:0] flash_dq_i;
 logic [15:0] flash_dq_o;
 logic [15:0] flash_dq_t;
 
+//`define AXI_EMC_FLASH_TEST
+`ifndef AXI_EMC_FLASH_TEST
 // apb bus interface
 logic         flash_penable;
 logic         flash_pwrite;
@@ -1029,8 +1031,6 @@ logic [31:0]  flash_prdata;
 logic         flash_pready;
 logic         flash_pslverr;
 
-//`define DUMMY_FLASH_TEST
-`ifndef DUMMY_FLASH_TEST
 axi2apb_64_32 #(
     .AXI4_ADDRESS_WIDTH     ( AxiAddrWidth               ),
     .AXI4_RDATA_WIDTH       ( AxiDataWidth               ),
@@ -1040,7 +1040,7 @@ axi2apb_64_32 #(
     .BUFF_DEPTH_SLAVE   ( 2             ),
     .APB_ADDR_WIDTH     ( 32            )
 ) i_axi2apb_emc (
-    .ACLK      ( clk_i          ),
+    .ACLK      ( clk            ),
     .ARESETn   ( ndmreset_n     ),
     .test_en_i ( 1'b0           ),
     .AWID_i    ( master[ariane_soc::Flash].aw_id     ),
@@ -1097,8 +1097,8 @@ axi2apb_64_32 #(
     .PSLVERR   ( flash_pslverr   )
 );
 
-ariane_emc_dummy i_emc (
-    .clk        ( clk_i         ),
+ariane_emc i_emc (
+    .clk        ( clk           ),
     .rstn       ( ndmreset_n    ),
 
     .penable    ( flash_penable ),
@@ -1121,40 +1121,68 @@ ariane_emc_dummy i_emc (
     .flash_wait ( 1'b0          )
 );
 `else
-
-logic                    flashtest_rom_req;
-logic [AxiAddrWidth-1:0] flashtest_rom_addr;
-logic [AxiDataWidth-1:0] flashtest_rom_rdata;
-axi2mem #(
-    .AXI_ID_WIDTH   ( AxiIdWidthSlaves ),
-    .AXI_ADDR_WIDTH ( AxiAddrWidth     ),
-    .AXI_DATA_WIDTH ( AxiDataWidth     ),
-    .AXI_USER_WIDTH ( AxiUserWidth     )
-) i_axi2rom_flashtest (
-    .clk_i  ( clk                     ),
-    .rst_ni ( ndmreset_n              ),
-    .slave  ( master[ariane_soc::Flash] ),
-    .req_o  ( flashtest_rom_req                 ),
-    .we_o   (                         ),
-    .addr_o ( flashtest_rom_addr                ),
-    .be_o   (                         ),
-    .data_o (                         ),
-    .data_i ( flashtest_rom_rdata               )
+// Linear BPI flash
+vc709_axi_emc i_axi_emc (
+    .s_axi_aclk    ( clk        ),
+    .s_axi_aresetn ( ndmreset_n ),
+    .rdclk         ( clk        ),
+    .s_axi_mem_awid     ( master[ariane_soc::Flash].aw_id          ),
+    .s_axi_mem_awaddr   ( master[ariane_soc::Flash].aw_addr[31:0]  ),
+    .s_axi_mem_awlen    ( master[ariane_soc::Flash].aw_len         ),
+    .s_axi_mem_awsize   ( master[ariane_soc::Flash].aw_size        ),
+    .s_axi_mem_awburst  ( master[ariane_soc::Flash].aw_burst       ),
+    .s_axi_mem_awlock   ( master[ariane_soc::Flash].aw_lock        ),
+    .s_axi_mem_awcache  ( master[ariane_soc::Flash].aw_cache       ),
+    .s_axi_mem_awprot   ( master[ariane_soc::Flash].aw_prot        ),
+//  .s_axi_mem_awregion ( master[ariane_soc::Flash].aw_region      ),
+//  .s_axi_mem_awqos    ( master[ariane_soc::Flash].aw_qos         ),
+    .s_axi_mem_awvalid  ( master[ariane_soc::Flash].aw_valid       ),
+    .s_axi_mem_awready  ( master[ariane_soc::Flash].aw_ready       ),
+    .s_axi_mem_wdata    ( master[ariane_soc::Flash].w_data         ),
+    .s_axi_mem_wstrb    ( master[ariane_soc::Flash].w_strb         ),
+    .s_axi_mem_wlast    ( master[ariane_soc::Flash].w_last         ),
+    .s_axi_mem_wvalid   ( master[ariane_soc::Flash].w_valid        ),
+    .s_axi_mem_wready   ( master[ariane_soc::Flash].w_ready        ),
+    .s_axi_mem_bid      ( master[ariane_soc::Flash].b_id           ),
+    .s_axi_mem_bresp    ( master[ariane_soc::Flash].b_resp         ),
+    .s_axi_mem_bvalid   ( master[ariane_soc::Flash].b_valid        ),
+    .s_axi_mem_bready   ( master[ariane_soc::Flash].b_ready        ),
+    .s_axi_mem_arid     ( master[ariane_soc::Flash].ar_id          ),
+    .s_axi_mem_araddr   ( master[ariane_soc::Flash].ar_addr[31:0]  ),
+    .s_axi_mem_arlen    ( master[ariane_soc::Flash].ar_len         ),
+    .s_axi_mem_arsize   ( master[ariane_soc::Flash].ar_size        ),
+    .s_axi_mem_arburst  ( master[ariane_soc::Flash].ar_burst       ),
+    .s_axi_mem_arlock   ( master[ariane_soc::Flash].ar_lock        ),
+    .s_axi_mem_arcache  ( master[ariane_soc::Flash].ar_cache       ),
+    .s_axi_mem_arprot   ( master[ariane_soc::Flash].ar_prot        ),
+//  .s_axi_mem_arregion ( master[ariane_soc::Flash].ar_region      ),
+//  .s_axi_mem_arqos    ( master[ariane_soc::Flash].ar_qos         ),
+    .s_axi_mem_arvalid  ( master[ariane_soc::Flash].ar_valid       ),
+    .s_axi_mem_arready  ( master[ariane_soc::Flash].ar_ready       ),
+    .s_axi_mem_rid      ( master[ariane_soc::Flash].r_id           ),
+    .s_axi_mem_rdata    ( master[ariane_soc::Flash].r_data         ),
+    .s_axi_mem_rresp    ( master[ariane_soc::Flash].r_resp         ),
+    .s_axi_mem_rlast    ( master[ariane_soc::Flash].r_last         ),
+    .s_axi_mem_rvalid   ( master[ariane_soc::Flash].r_valid        ),
+    .s_axi_mem_rready   ( master[ariane_soc::Flash].r_ready        ),
+    .mem_dq_i           ( flash_dq_i  ),
+    .mem_dq_o           ( flash_dq_o  ),
+    .mem_dq_t           ( flash_dq_t  ),
+    .mem_a              ( {flash_addr, flash_unused_addr0}  ),
+    .mem_ce             (             ),
+    .mem_cen            ( flash_ce_b  ),
+    .mem_oen            ( flash_oe_b  ),
+    .mem_wen            ( flash_we_b  ),
+    .mem_ben            (             ),
+    .mem_qwen           (             ),
+    .mem_rpn            (             ),
+    .mem_adv_ldn        ( flash_adv_b ),
+    .mem_lbon           (             ),
+    .mem_cken           (             ),
+    .mem_rnw            (             ),
+    .mem_cre            (             ),
+    .mem_wait           ( '0          )
 );
-
-bootrom i_bootrom_flashtest (
-    .clk_i   ( clk       ),
-    .req_i   ( flashtest_rom_req   ),
-    .addr_i  ( flashtest_rom_addr  ),
-    .rdata_o ( flashtest_rom_rdata )
-);
-assign flash_dq_o = '0;
-assign flash_dq_t = '1;
-assign flash_addr = '0;
-assign flash_we_b = '1;
-assign flash_oe_b = '1;
-assign flash_ce_b = '1;
-assign flash_adv_b= '1;
 `endif
 
 genvar gi;
@@ -1170,6 +1198,7 @@ generate
 endgenerate
 
 // ILA
+/*
 (* mark_debug = "true" *) logic [4:0]  flash_aw_id;
 (* mark_debug = "true" *) logic [63:0] flash_aw_addr;
 (* mark_debug = "true" *) logic [7:0]  flash_aw_len;
@@ -1260,6 +1289,7 @@ vc707_ila i_ila_flash(
 .probe26 ( flash_r_valid  ),
 .probe27 ( flash_r_ready  )
 );
+*/
 
 `elsif VCU118
 
