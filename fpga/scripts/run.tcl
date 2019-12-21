@@ -28,12 +28,14 @@ if {$::env(BOARD) eq "genesys2"} {
       exit 1
 }
 
-read_ip xilinx/xlnx_mig_7_ddr3/ip/xlnx_mig_7_ddr3.xci
-read_ip xilinx/xlnx_axi_clock_converter/ip/xlnx_axi_clock_converter.xci
-read_ip xilinx/xlnx_axi_dwidth_converter/ip/xlnx_axi_dwidth_converter.xci
-read_ip xilinx/xlnx_axi_gpio/ip/xlnx_axi_gpio.xci
-read_ip xilinx/xlnx_axi_quad_spi/ip/xlnx_axi_quad_spi.xci
-read_ip xilinx/xlnx_clk_gen/ip/xlnx_clk_gen.xci
+#read_ip xilinx/xlnx_mig_7_ddr3/ip/xlnx_mig_7_ddr3.xci
+#read_ip xilinx/xlnx_axi_clock_converter/ip/xlnx_axi_clock_converter.xci
+#read_ip xilinx/xlnx_axi_dwidth_converter/ip/xlnx_axi_dwidth_converter.xci
+#read_ip xilinx/xlnx_axi_gpio/ip/xlnx_axi_gpio.xci
+#read_ip xilinx/xlnx_axi_quad_spi/ip/xlnx_axi_quad_spi.xci
+#read_ip xilinx/xlnx_clk_gen/ip/xlnx_clk_gen.xci
+
+source scripts/add_ips.tcl
 # read_ip xilinx/xlnx_protocol_checker/ip/xlnx_protocol_checker.xci
 
 set_property include_dirs { "src/axi_sd_bridge/include" "../src/common_cells/include" } [current_fileset]
@@ -77,8 +79,8 @@ launch_runs synth_1
 wait_on_run synth_1
 open_run synth_1
 
-exec mkdir -p reports/
-exec rm -rf reports/*
+# exec mkdir -p reports/
+# exec rm -rf reports/*
 
 check_timing -verbose                                                   -file reports/$project.check_timing.rpt
 report_timing -max_paths 100 -nworst 100 -delay_type max -sort_by slack -file reports/$project.timing_WORST_100.rpt
@@ -103,8 +105,8 @@ write_verilog -force -mode timesim work-fpga/${project}_timesim.v
 write_sdf     -force work-fpga/${project}_timesim.sdf
 
 # reports
-exec mkdir -p reports/
-exec rm -rf reports/*
+# exec mkdir -p reports/
+# exec rm -rf reports/*
 check_timing                                                              -file reports/${project}.check_timing.rpt
 report_timing -max_paths 100 -nworst 100 -delay_type max -sort_by slack   -file reports/${project}.timing_WORST_100.rpt
 report_timing -nworst 1 -delay_type max -sort_by group                    -file reports/${project}.timing.rpt
