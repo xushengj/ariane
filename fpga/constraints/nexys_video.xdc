@@ -82,6 +82,12 @@ set_property -dict { PACKAGE_PIN W20   IOSTANDARD LVCMOS33 } [get_ports { spi_mo
 # Nexys Video has a quad SPI flash
 set_property BITSTREAM.CONFIG.SPI_BUSWIDTH 4 [current_design]
 
+# UART2 -> PMOD JA
+set_property -dict { PACKAGE_PIN AB22   IOSTANDARD LVCMOS33 } [get_ports { uart2_cts }]; # JA1
+set_property -dict { PACKAGE_PIN AB21   IOSTANDARD LVCMOS33 } [get_ports { uart2_tx  }]; # JA2
+set_property -dict { PACKAGE_PIN AB20   IOSTANDARD LVCMOS33 } [get_ports { uart2_rx  }]; # JA3
+set_property -dict { PACKAGE_PIN AB18   IOSTANDARD LVCMOS33 } [get_ports { uart2_rts }]; # JA4
+
 ## JTAG
 # minimize routing delay
 

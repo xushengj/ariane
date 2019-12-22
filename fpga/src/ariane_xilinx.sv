@@ -169,6 +169,10 @@ module ariane_xilinx (
   input  logic [ 7:0]  sw          ,
   output logic         fan_pwm     ,
   input  logic         trst_n      ,
+  input  logic         uart2_rx    ,
+  output logic         uart2_tx    ,
+  input  logic         uart2_cts   ,
+  output logic         uart2_rts   ,
 `endif
   // SPI
   output logic        spi_mosi    ,
@@ -304,6 +308,7 @@ axi_node_wrap_with_slices #(
         ariane_soc::CLINTBase,
         ariane_soc::PLICBase,
         ariane_soc::UARTBase,
+        ariane_soc::UART2Base,
         ariane_soc::SPIBase,
         ariane_soc::EthernetBase,
         ariane_soc::GPIOBase,
@@ -315,6 +320,7 @@ axi_node_wrap_with_slices #(
         ariane_soc::CLINTBase    + ariane_soc::CLINTLength - 1,
         ariane_soc::PLICBase     + ariane_soc::PLICLength - 1,
         ariane_soc::UARTBase     + ariane_soc::UARTLength - 1,
+        ariane_soc::UART2Base    + ariane_soc::UARTLength - 1,
         ariane_soc::SPIBase      + ariane_soc::SPILength - 1,
         ariane_soc::EthernetBase + ariane_soc::EthernetLength -1,
         ariane_soc::GPIOBase     + ariane_soc::GPIOLength - 1,
@@ -1590,6 +1596,110 @@ xlnx_mig_7_ddr3 i_ddr (
     .device_temp         (            ), // keep open
     .sys_rst             ( cpu_resetn )
 );
+
+// uart2
+
+logic         uart2_penable;
+logic         uart2_pwrite;
+logic [31:0]  uart2_paddr;
+logic         uart2_psel;
+logic [31:0]  uart2_pwdata;
+logic [31:0]  uart2_prdata;
+logic         uart2_pready;
+logic         uart2_pslverr;
+
+axi2apb_64_32 #(
+    .AXI4_ADDRESS_WIDTH ( AxiAddrWidth ),
+    .AXI4_RDATA_WIDTH   ( AxiDataWidth ),
+    .AXI4_WDATA_WIDTH   ( AxiDataWidth ),
+    .AXI4_ID_WIDTH      ( AxiIdWidthSlaves),
+    .AXI4_USER_WIDTH    ( AxiUserWidth ),
+    .BUFF_DEPTH_SLAVE   ( 2            ),
+    .APB_ADDR_WIDTH     ( 32           )
+) i_axi2apb_64_32_uart2 (
+    .ACLK      ( clk            ),
+    .ARESETn   ( ndmreset_n     ),
+    .test_en_i ( 1'b0           ),
+    .AWID_i    ( master[ariane_soc::UART2].aw_id     ),
+    .AWADDR_i  ( master[ariane_soc::UART2].aw_addr   ),
+    .AWLEN_i   ( master[ariane_soc::UART2].aw_len    ),
+    .AWSIZE_i  ( master[ariane_soc::UART2].aw_size   ),
+    .AWBURST_i ( master[ariane_soc::UART2].aw_burst  ),
+    .AWLOCK_i  ( master[ariane_soc::UART2].aw_lock   ),
+    .AWCACHE_i ( master[ariane_soc::UART2].aw_cache  ),
+    .AWPROT_i  ( master[ariane_soc::UART2].aw_prot   ),
+    .AWREGION_i( master[ariane_soc::UART2].aw_region ),
+    .AWUSER_i  ( master[ariane_soc::UART2].aw_user   ),
+    .AWQOS_i   ( master[ariane_soc::UART2].aw_qos    ),
+    .AWVALID_i ( master[ariane_soc::UART2].aw_valid  ),
+    .AWREADY_o ( master[ariane_soc::UART2].aw_ready  ),
+    .WDATA_i   ( master[ariane_soc::UART2].w_data    ),
+    .WSTRB_i   ( master[ariane_soc::UART2].w_strb    ),
+    .WLAST_i   ( master[ariane_soc::UART2].w_last    ),
+    .WUSER_i   ( master[ariane_soc::UART2].w_user    ),
+    .WVALID_i  ( master[ariane_soc::UART2].w_valid   ),
+    .WREADY_o  ( master[ariane_soc::UART2].w_ready   ),
+    .BID_o     ( master[ariane_soc::UART2].b_id      ),
+    .BRESP_o   ( master[ariane_soc::UART2].b_resp    ),
+    .BVALID_o  ( master[ariane_soc::UART2].b_valid   ),
+    .BUSER_o   ( master[ariane_soc::UART2].b_user    ),
+    .BREADY_i  ( master[ariane_soc::UART2].b_ready   ),
+    .ARID_i    ( master[ariane_soc::UART2].ar_id     ),
+    .ARADDR_i  ( master[ariane_soc::UART2].ar_addr   ),
+    .ARLEN_i   ( master[ariane_soc::UART2].ar_len    ),
+    .ARSIZE_i  ( master[ariane_soc::UART2].ar_size   ),
+    .ARBURST_i ( master[ariane_soc::UART2].ar_burst  ),
+    .ARLOCK_i  ( master[ariane_soc::UART2].ar_lock   ),
+    .ARCACHE_i ( master[ariane_soc::UART2].ar_cache  ),
+    .ARPROT_i  ( master[ariane_soc::UART2].ar_prot   ),
+    .ARREGION_i( master[ariane_soc::UART2].ar_region ),
+    .ARUSER_i  ( master[ariane_soc::UART2].ar_user   ),
+    .ARQOS_i   ( master[ariane_soc::UART2].ar_qos    ),
+    .ARVALID_i ( master[ariane_soc::UART2].ar_valid  ),
+    .ARREADY_o ( master[ariane_soc::UART2].ar_ready  ),
+    .RID_o     ( master[ariane_soc::UART2].r_id      ),
+    .RDATA_o   ( master[ariane_soc::UART2].r_data    ),
+    .RRESP_o   ( master[ariane_soc::UART2].r_resp    ),
+    .RLAST_o   ( master[ariane_soc::UART2].r_last    ),
+    .RUSER_o   ( master[ariane_soc::UART2].r_user    ),
+    .RVALID_o  ( master[ariane_soc::UART2].r_valid   ),
+    .RREADY_i  ( master[ariane_soc::UART2].r_ready   ),
+    .PENABLE   ( uart2_penable   ),
+    .PWRITE    ( uart2_pwrite    ),
+    .PADDR     ( uart2_paddr     ),
+    .PSEL      ( uart2_psel      ),
+    .PWDATA    ( uart2_pwdata    ),
+    .PRDATA    ( uart2_prdata    ),
+    .PREADY    ( uart2_pready    ),
+    .PSLVERR   ( uart2_pslverr   )
+);
+
+apb_uart i_apb_uart2 (
+    .CLK     ( clk             ),
+    .RSTN    ( ndmreset_n       ),
+    .PSEL    ( uart2_psel       ),
+    .PENABLE ( uart2_penable    ),
+    .PWRITE  ( uart2_pwrite     ),
+    .PADDR   ( uart2_paddr[4:2] ),
+    .PWDATA  ( uart2_pwdata     ),
+    .PRDATA  ( uart2_prdata     ),
+    .PREADY  ( uart2_pready     ),
+    .PSLVERR ( uart2_pslverr    ),
+    .INT     (                 ), // No interrupt
+    .OUT1N   (                 ), // keep open
+    .OUT2N   (                 ), // keep open
+    .RTSN    (                 ), // no flow control
+    .DTRN    (                 ), // no flow control
+    .CTSN    ( 1'b0            ),
+    .DSRN    ( 1'b0            ),
+    .DCDN    ( 1'b0            ),
+    .RIN     ( 1'b0            ),
+    .SIN     ( uart2_rx        ),
+    .SOUT    ( uart2_tx        )
+);
+
+assign uart2_rts = 1'b0;
+
 `endif
 
 endmodule
